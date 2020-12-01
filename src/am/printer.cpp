@@ -170,6 +170,8 @@ void Printer::parse(std::string &file) {
     for(int i = 0; i < p.num_blocks(); i++) {
         gpr::block block = p.get_block(i);
 
+        if(block.size() == 0) continue;
+
         // Move commands
         if(block.get_chunk(0) == g1 || block.get_chunk(0) == g0) {
             this->add_print_move(block);
