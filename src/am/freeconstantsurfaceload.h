@@ -93,6 +93,7 @@ public:
 private:
     void computeNArray(FloatArray &answer, const FloatArray &coords) const override { answer.clear(); }
     double loadOffset;  // xi-coord offset of load. xi=-1 -> bottom, xi=0 -> midsurface (default), xi=1 -> top surface
+    bool alreadyDisabled = false;
 };
 } // end namespace oofem
 #endif // constantsurfaceload_h

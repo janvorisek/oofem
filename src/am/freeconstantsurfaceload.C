@@ -104,6 +104,8 @@ FreeConstantSurfaceLoad :: computeValueAt(FloatArray &answer, TimeStep *tStep, c
 
 bool FreeConstantSurfaceLoad :: isImposed(TimeStep *tStep)
 {
+    if(this->alreadyDisabled) return false;
+
     //std::cout << "start\n";
     IntArray boundaries = domain->giveSet(set)->giveBoundaryList();
 
@@ -147,46 +149,12 @@ bool FreeConstantSurfaceLoad :: isImposed(TimeStep *tStep)
 
     // if some element is connected to 4 nodes, its connected to the whole face!
     for(auto &el : connmap) {
-        if(el.second == 4) return false;
+        if(el.second == 4) {
+            this->alreadyDisabled = true;
+            return false; 
+        }
     }
 
     return true;
-
-    // DEAD CODE FOLLOWS BRO:
-        
-    // iterate over all elements and see if any element of same type covers surface of this BC
-    for(int i = 1; i <= nElements; i ++) {
-        Element *trial = domain->giveElement(i);
-
-        // skip elements of different type and self
-        if(trial->giveNumber() == el->giveNumber() || el->giveClassName() != trial->giveClassName()) continue;
-
-        IntArray dofmanArray = trial->giveDofManArray();
-        int nNodeTrials = trial->giveNumberOfNodes();
-
-        int nMatched = 0;
-        // iterate over all nodes of n-th element
-        for(int j = 1; j <= nNodeTrials; j++) {
-            int id = trial->giveDofManagerNumber(j);
-
-            // iterate over BC's surface nodes
-            for(int k = 0; k < nSurfNodes; k++) {
-                if(el->giveDofManagerNumber(surfNodes[k]) == id) nMatched++;
-            }
-        }
-
-        // if some element of the same type has enough matching nodes
-        // then such element covers our BC's surface
-        if(nMatched == nSurfNodes) return false;
-    }
-
-    // if not covered let LTF decide as usual (as in regular ConstantSurfaceLoad)
-    if ( isImposedTimeFunction ) {
-        return ( domain->giveFunction(isImposedTimeFunction)->evaluateAtTime( tStep->giveIntrinsicTime() ) != 0. );
-    } else {
-        // zero value indicates default behavior -> b.c. is imposed
-        // anytime
-        return true;
-    }
 }
 } // end namespace oofem
