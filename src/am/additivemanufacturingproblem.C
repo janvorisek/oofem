@@ -757,10 +757,26 @@ AdditiveManufacturingProblem :: solveYourself()
                 this->forceEquationNumbering();
             }
 
+            Timer timer;
+            timer.startTimer();
             this->initializeYourself( sp->giveCurrentStep() );
+            timer.stopTimer();
+            printf("this->initializeYourself( sp->giveCurrentStep() ); took %.3f s\n", timer.getUtime());
+            
+            timer.startTimer();
             this->solveYourselfAt( sp->giveCurrentStep() );
+            timer.stopTimer();
+            printf("this->solveYourselfAt( sp->giveCurrentStep() ); took %.3f s\n", timer.getUtime());
+            
+            timer.startTimer();
             this->updateYourself( sp->giveCurrentStep() );
+            timer.stopTimer();
+            printf("this->updateYourself( sp->giveCurrentStep() ); took %.3f s\n", timer.getUtime());
+            
+            timer.startTimer();
             this->terminate( sp->giveCurrentStep() );
+            timer.stopTimer();
+            printf("this->terminate( sp->giveCurrentStep() ); took %.3f s\n", timer.getUtime());
 
             this->timer.stopTimer(EngngModelTimer :: EMTT_SolutionStepTimer);
             double _steptime = this->timer.getUtime(EngngModelTimer :: EMTT_SolutionStepTimer);
@@ -846,9 +862,16 @@ AdditiveManufacturingProblem :: solveYourselfAt(TimeStep *tStep)
 
             OOFEM_LOG_INFO("added\n");
             if(adding) {
+                timer.startTimer();
                 emodel->forceEquationNumbering();
+                timer.stopTimer();
+                printf("emodel->forceEquationNumbering(); took %.3f s\n", timer.getUtime());
+                
                 // todo: is needed? yes it is!
+                timer.startTimer();
                 emodel->giveDomain(1)->giveConnectivityTable()->reset();
+                timer.stopTimer();
+                printf("emodel->giveDomain(1)->giveConnectivityTable()->reset(); took %.3f s\n", timer.getUtime());
 
                 //emodelList.at(0)->giveExportModuleManager()->giveModule(1)->clear
                 if(emodelList.at(0)->giveExportModuleManager()->giveNumberOfModules() > 0) {
