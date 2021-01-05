@@ -73,6 +73,8 @@ namespace oofem {
     ENUM_ITEM(_3dHeat) /* 3d heat or 3d mass */ \
     ENUM_ITEM(_3dHeMo) /* 3d heat and mass (one component) transfer */ \
   \
+    ENUM_ITEM(_3dHeInterface) \
+ \
     ENUM_ITEM(_2dFlow) \
     ENUM_ITEM(_2dAxiFlow) \
     ENUM_ITEM(_3dFlow) \
