@@ -211,6 +211,9 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
 //
 //
 {
+    Timer stimer;
+    stimer.startTimer();
+    printf("Starting NRSolver::solve\n");
     // residual, iteration increment of solution, total external force
     FloatArray rhs, ddX, RT;
     double RRT;
@@ -235,16 +238,20 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
     this->giveLinearSolver();
 
     // compute total load R = R+R0
+    
     RT = R;
     if ( R0 ) {
         RT.add(* R0);
     }
+    //OOFEM_LOG_INFO("RT.add(* R0) at %.3f s\n", stimer.getUtime());
 
     RRT = parallel_context->localNorm(RT);
     RRT *= RRT;
+    //OOFEM_LOG_INFO("RRT = parallel_context->localNorm(RT); at %.3f s\n", stimer.getUtime());
 
     ddX.resize(neq);
     ddX.zero();
+    //OOFEM_LOG_INFO("ddX.resize(neq) && ddX.zero(); at %.3f s\n", stimer.getUtime());
 
     // Fetch the matrix before evaluating internal forces.
     // This is intentional, since its a simple way to drastically increase convergence for nonlinear problems.
@@ -254,15 +261,21 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
     // the stiffness should be evaluated before the residual (default yes). /ES
 
     engngModel->updateComponent(tStep, NonLinearLhs, domain);
+    //OOFEM_LOG_INFO("engngModel->updateComponent(tStep, NonLinearLhs, domain); at %.3f s\n", stimer.getUtime());
+
     if ( this->prescribedDofsFlag ) {
         if ( !prescribedEqsInitFlag ) {
             this->initPrescribedEqs();
         }
         applyConstraintsToStiffness(k);
     }
+    //OOFEM_LOG_INFO("this->prescribedDofsFlag... at %.3f s\n", stimer.getUtime());
 
     nite = 0;
     for ( nite = 0; ; ++nite ) {
+        Timer timer;
+        timer.startTimer();
+        OOFEM_LOG_INFO("zacinam resit NRSolver iteraci %d\n", nite);
         // Compute the residual
         engngModel->updateComponent(tStep, InternalRhs, domain);
         rhs.beDifferenceOf(RT, F);
@@ -280,6 +293,8 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
             break;
         } else if ( converged && ( nite >= minIterations ) ) {
             status |= NM_Success;
+            timer.stopTimer();
+            OOFEM_LOG_INFO("Krok NRSolveru vyresen za %.3f s\n", timer.getUtime());
             break;
         } else if ( nite >= nsmax ) {
             OOFEM_LOG_DEBUG("Maximum number of iterations reached\n");
@@ -359,6 +374,9 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
         tStep->incrementSubStepNumber();
 
         engngModel->giveExportModuleManager()->doOutput(tStep, true);
+
+        timer.stopTimer();
+        OOFEM_LOG_INFO("Krok NRSolveru vyresen za %.3f s\n", timer.getUtime());
     }
 
     // Modify Load vector to include "quasi reaction"

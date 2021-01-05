@@ -199,15 +199,23 @@ void TransientTransportProblem :: solveYourselfAt(TimeStep *tStep)
     field->advanceSolution(tStep);
     field->initialize(VM_Total, tStep, solution, EModelDefaultEquationNumbering());
 
+    Timer timer;
+    //timer.startTimer();
     if ( !effectiveMatrix ) {
         effectiveMatrix = classFactory.createSparseMtrx(sparseMtrxType);
         effectiveMatrix->buildInternalStructure( this, 1, EModelDefaultEquationNumbering() );
     }
+    //timer.stopTimer();
+    //printf("Sparse matrix assembly took %.3f s\n", timer.getWtime());
 
     OOFEM_LOG_INFO("Assembling external forces\n");
     FloatArray externalForces(neq);
     externalForces.zero();
+    timer.startTimer();
     this->assembleVector( externalForces, tStep, ExternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), d );
+    timer.stopTimer();
+    printf("assembleVector( externalForces ... ) took %.3f s\n", timer.getWtime());
+    
     this->updateSharedDofManagers(externalForces, EModelDefaultEquationNumbering(), LoadExchangeTag);
 
     // set-up numerical method
@@ -219,7 +227,13 @@ void TransientTransportProblem :: solveYourselfAt(TimeStep *tStep)
     FloatArray incrementOfSolution;
     double loadLevel;
     int currentIterations;
+    
+    timer.startTimer();
     this->updateInternalRHS(this->internalForces, tStep, this->giveDomain(1), &this->eNorm); /// @todo Hack to ensure that internal RHS is evaluated before the tangent. This is not ideal, causing this to be evaluated twice for a linearproblem. We have to find a better way to handle this.
+    timer.stopTimer();
+    printf("updateInternalRHS took %.3f s\n", timer.getUtime());
+    printf("volam this->nMethod->solve()");
+    timer.startTimer();
     this->nMethod->solve(*this->effectiveMatrix,
                          externalForces,
                          nullptr, // ignore
@@ -231,6 +245,8 @@ void TransientTransportProblem :: solveYourselfAt(TimeStep *tStep)
                          SparseNonLinearSystemNM :: rlm_total, // ignore
                          currentIterations, // ignore
                          tStep);
+    timer.stopTimer();
+    printf("this->nMethod->solve() took %.3f s\n", timer.getUtime());
 }
 
 
@@ -277,8 +293,12 @@ TransientTransportProblem :: updateMatrix(SparseMtrx &mat, TimeStep *tStep, Doma
     // K_eff = (a*K + C/dt)
     if ( !this->keepTangent || !this->hasTangent ) {
         mat.zero();
+        Timer timer;
+        timer.startTimer();
         this->assemble(mat, tStep, EffectiveTangentAssembler(TangentStiffness, lumped, this->alpha, 1./tStep->giveTimeIncrement()),
                        EModelDefaultEquationNumbering(), d );
+        timer.stopTimer();
+        printf("TransientTransportProblem :: updateMatrix ... ASSEMBLE took %.3f s\n", timer.getUtime());
         this->hasTangent = true;
     }
 }
@@ -330,8 +350,13 @@ TransientTransportProblem :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn
         // K_eff = (a*K + C/dt)
         if ( !this->keepTangent || !this->hasTangent ) {
             this->effectiveMatrix->zero();
+            Timer timer;
+            timer.startTimer();
             this->assemble( *effectiveMatrix, tStep, EffectiveTangentAssembler(TangentStiffness, lumped, this->alpha, 1./tStep->giveTimeIncrement()),
-                                                                               EModelDefaultEquationNumbering(), d );
+                                                                                EModelDefaultEquationNumbering(), d );
+                
+            timer.stopTimer();
+            printf("TransientTransportProblem :: updateComponent ... ASSEMBLE took %.3f s\n", timer.getUtime());
             this->hasTangent = true;
         }
     } else {
