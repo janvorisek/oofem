@@ -38,6 +38,7 @@
 #include "maskedprimaryfield.h"
 #include "intvarfield.h"
 #include "tm/Elements/transportelement.h"
+#include "tm/Elements/Interfaces/transportinterfaceelement.h"
 #include "classfactory.h"
 #include "datastream.h"
 #include "contextioerr.h"
@@ -452,7 +453,7 @@ TransientTransportProblem :: checkConsistency()
 {
     // check for proper element type
     for ( auto &elem : this->giveDomain(1)->giveElements() ) {
-        if ( !dynamic_cast< TransportElement * >( elem.get() ) ) {
+        if ( !dynamic_cast< TransportElement * >( elem.get() ) && !dynamic_cast< TransportInterfaceElement * >( elem.get() ) ) {
             OOFEM_WARNING("Element %d has no TransportElement base", elem->giveLabel());
             return 0;
         }

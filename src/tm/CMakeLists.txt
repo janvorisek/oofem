@@ -27,6 +27,8 @@ set (tm_element
     Elements/LatticeElements/latticetransportelement.C
     Elements/LatticeElements/lattice2d_mt.C
     Elements/LatticeElements/lattice3d_mt.C
+    Elements/Interfaces/transportinterfaceelement.C
+    Elements/Interfaces/intelsurfquadlin_ht.C
     )
 
 set (tm_boundary
@@ -59,6 +61,7 @@ set (tm_material
     Materials/rvestokesflow.C
     Materials/transportmaterial.C
     Materials/twophasemat.C
+    Materials/InterfaceMaterials/transportinterfacematerial.C
     )
 
 set (tm
