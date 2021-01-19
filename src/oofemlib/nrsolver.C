@@ -243,15 +243,15 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
     if ( R0 ) {
         RT.add(* R0);
     }
-    //OOFEM_LOG_INFO("RT.add(* R0) at %.3f s\n", stimer.getUtime());
+    //OOFEM_LOG_INFO("RT.add(* R0) at %.3f s\n", stimer.getWtime());
 
     RRT = parallel_context->localNorm(RT);
     RRT *= RRT;
-    //OOFEM_LOG_INFO("RRT = parallel_context->localNorm(RT); at %.3f s\n", stimer.getUtime());
+    //OOFEM_LOG_INFO("RRT = parallel_context->localNorm(RT); at %.3f s\n", stimer.getWtime());
 
     ddX.resize(neq);
     ddX.zero();
-    //OOFEM_LOG_INFO("ddX.resize(neq) && ddX.zero(); at %.3f s\n", stimer.getUtime());
+    //OOFEM_LOG_INFO("ddX.resize(neq) && ddX.zero(); at %.3f s\n", stimer.getWtime());
 
     // Fetch the matrix before evaluating internal forces.
     // This is intentional, since its a simple way to drastically increase convergence for nonlinear problems.
@@ -261,7 +261,7 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
     // the stiffness should be evaluated before the residual (default yes). /ES
 
     engngModel->updateComponent(tStep, NonLinearLhs, domain);
-    //OOFEM_LOG_INFO("engngModel->updateComponent(tStep, NonLinearLhs, domain); at %.3f s\n", stimer.getUtime());
+    //OOFEM_LOG_INFO("engngModel->updateComponent(tStep, NonLinearLhs, domain); at %.3f s\n", stimer.getWtime());
 
     if ( this->prescribedDofsFlag ) {
         if ( !prescribedEqsInitFlag ) {
@@ -269,7 +269,7 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
         }
         applyConstraintsToStiffness(k);
     }
-    //OOFEM_LOG_INFO("this->prescribedDofsFlag... at %.3f s\n", stimer.getUtime());
+    //OOFEM_LOG_INFO("this->prescribedDofsFlag... at %.3f s\n", stimer.getWtime());
 
     nite = 0;
     for ( nite = 0; ; ++nite ) {
@@ -376,7 +376,7 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
         engngModel->giveExportModuleManager()->doOutput(tStep, true);
 
         timer.stopTimer();
-        OOFEM_LOG_INFO("Krok NRSolveru vyresen za %.3f s\n", timer.getUtime());
+        OOFEM_LOG_INFO("Krok NRSolveru vyresen za %.3f s\n", timer.getWtime());
     }
 
     // Modify Load vector to include "quasi reaction"
