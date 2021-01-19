@@ -214,7 +214,7 @@ void TransientTransportProblem :: solveYourselfAt(TimeStep *tStep)
     timer.startTimer();
     this->assembleVector( externalForces, tStep, ExternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), d );
     timer.stopTimer();
-    printf("assembleVector( externalForces ... ) took %.3f s\n", timer.getWtime());
+    printf("assembleVector( externalForces ... ) took %.3f s\n", timer.getUtime());
     
     this->updateSharedDofManagers(externalForces, EModelDefaultEquationNumbering(), LoadExchangeTag);
 
