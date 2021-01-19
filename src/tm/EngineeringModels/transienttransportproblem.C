@@ -214,7 +214,7 @@ void TransientTransportProblem :: solveYourselfAt(TimeStep *tStep)
     timer.startTimer();
     this->assembleVector( externalForces, tStep, ExternalForceAssembler(), VM_Total, EModelDefaultEquationNumbering(), d );
     timer.stopTimer();
-    printf("assembleVector( externalForces ... ) took %.3f s\n", timer.getUtime());
+    printf("assembleVector( externalForces ... ) took %.3f s\n", timer.getWtime());
     
     this->updateSharedDofManagers(externalForces, EModelDefaultEquationNumbering(), LoadExchangeTag);
 
@@ -231,7 +231,7 @@ void TransientTransportProblem :: solveYourselfAt(TimeStep *tStep)
     timer.startTimer();
     this->updateInternalRHS(this->internalForces, tStep, this->giveDomain(1), &this->eNorm); /// @todo Hack to ensure that internal RHS is evaluated before the tangent. This is not ideal, causing this to be evaluated twice for a linearproblem. We have to find a better way to handle this.
     timer.stopTimer();
-    printf("updateInternalRHS took %.3f s\n", timer.getUtime());
+    printf("updateInternalRHS took %.3f s\n", timer.getWtime());
     printf("volam this->nMethod->solve()");
     timer.startTimer();
     this->nMethod->solve(*this->effectiveMatrix,
@@ -246,7 +246,7 @@ void TransientTransportProblem :: solveYourselfAt(TimeStep *tStep)
                          currentIterations, // ignore
                          tStep);
     timer.stopTimer();
-    printf("this->nMethod->solve() took %.3f s\n", timer.getUtime());
+    printf("this->nMethod->solve() took %.3f s\n", timer.getWtime());
 }
 
 
@@ -298,7 +298,7 @@ TransientTransportProblem :: updateMatrix(SparseMtrx &mat, TimeStep *tStep, Doma
         this->assemble(mat, tStep, EffectiveTangentAssembler(TangentStiffness, lumped, this->alpha, 1./tStep->giveTimeIncrement()),
                        EModelDefaultEquationNumbering(), d );
         timer.stopTimer();
-        printf("TransientTransportProblem :: updateMatrix ... ASSEMBLE took %.3f s\n", timer.getUtime());
+        printf("TransientTransportProblem :: updateMatrix ... ASSEMBLE took %.3f s\n", timer.getWtime());
         this->hasTangent = true;
     }
 }
@@ -356,7 +356,7 @@ TransientTransportProblem :: updateComponent(TimeStep *tStep, NumericalCmpn cmpn
                                                                                 EModelDefaultEquationNumbering(), d );
                 
             timer.stopTimer();
-            printf("TransientTransportProblem :: updateComponent ... ASSEMBLE took %.3f s\n", timer.getUtime());
+            printf("TransientTransportProblem :: updateComponent ... ASSEMBLE took %.3f s\n", timer.getWtime());
             this->hasTangent = true;
         }
     } else {

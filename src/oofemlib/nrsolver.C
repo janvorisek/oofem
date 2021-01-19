@@ -294,7 +294,7 @@ NRSolver :: solve(SparseMtrx &k, FloatArray &R, FloatArray *R0,
         } else if ( converged && ( nite >= minIterations ) ) {
             status |= NM_Success;
             timer.stopTimer();
-            OOFEM_LOG_INFO("Krok NRSolveru vyresen za %.3f s\n", timer.getUtime());
+            OOFEM_LOG_INFO("Krok NRSolveru vyresen za %.3f s\n", timer.getWtime());
             break;
         } else if ( nite >= nsmax ) {
             OOFEM_LOG_DEBUG("Maximum number of iterations reached\n");
