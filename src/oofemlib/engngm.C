@@ -68,6 +68,7 @@
 #include "xfem/xfemmanager.h"
 #include "parallelcontext.h"
 #include "unknownnumberingscheme.h"
+#include "connectivitytable.h"
 #include "contact/contactmanager.h"
 
 
@@ -457,6 +458,10 @@ EngngModel :: forceEquationNumbering(int id)
         graph.askNewOptimalNumbering(currStep);
     }
 
+    if (false) {
+      std::vector<std::vector<int> > elementColors;
+      domain->giveConnectivityTable()->giveElementColoring(elementColors);
+    }
     return domainNeqs.at(id);
 }
 
@@ -792,6 +797,8 @@ void EngngModel :: printDofOutputAt(FILE *stream, Dof *iDof, TimeStep *tStep)
     iDof->printSingleOutputAt(stream, tStep, 'd', VM_Total);
 }
 
+//#define OPENMP_COLORING
+  
 void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAssembler &ma,
                             const UnknownNumberingScheme &s, Domain *domain)
 {
@@ -800,15 +807,32 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
 #ifdef _OPENMP
     omp_lock_t writelock;
     omp_init_lock(&writelock);
+    Timer timer0, timer;
 #endif
 
     this->timer.resumeTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
     int nelem = domain->giveNumberOfElements();
 #ifdef _OPENMP
+    timer0.startTimer();
+    timer.startTimer();
+#endif
+
+#if defined _OPENMP && defined OPENMP_COLORING
+    std::vector<std::vector<int> > elementColors;
+    domain->giveConnectivityTable()->giveElementColoring(elementColors);
+    int ncolors = elementColors.size();
+    for (int icolor = 1; icolor <= ncolors; icolor++) { // loop over individual colors
+      int ncolorelements=elementColors[icolor-1].size();
 #pragma omp parallel for shared(answer) private(mat, R, loc)
+      for (int ielem = 1; ielem<=ncolorelements; ielem++) {
+	auto element = domain->giveElement(elementColors[icolor-1][ielem-1]);
+#else
+#ifdef _OPENMP
+#pragma omp parallel for shared(answer) private(mat, R, loc) schedule(dynamic, 100)
 #endif
     for ( int ielem = 1; ielem <= nelem; ielem++ ) {
         auto element = domain->giveElement(ielem);
+#endif
         // skip remote elements (these are used as mirrors of remote elements on other domains
         // when nonlocal constitutive models are used. They introduction is necessary to
         // allow local averaging on domains without fine grain communication between domains).
@@ -825,16 +849,27 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
                 mat.rotatedWith(R);
             }
 
-#ifdef _OPENMP
- #pragma omp critical
+#if defined(_OPENMP) && !defined(OPENMP_COLORING) 
+#pragma omp critical
 #endif
             if ( answer.assemble(loc, mat) == 0 ) {
                 OOFEM_ERROR("sparse matrix assemble error");
             }
         }
     }
+#if defined(_OPENMP) && defined(OPENMP_COLORING)
+    }
+#endif
 
 #ifdef _OPENMP
+    timer.stopTimer();
+    OOFEM_LOG_INFO("/nAssembling element contributions done in %.2fs", timer.getWtime());
+#endif
+    
+
+#ifdef _OPENMP
+    timer.initTimer();
+    timer.startTimer();
 #pragma omp parallel for shared(answer) private(mat, R, loc)
 #endif
     for ( auto &bc : domain->giveBcs() ) {
@@ -935,6 +970,11 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
         }
     }
 
+#ifdef _OPENMP
+    timer.stopTimer();
+    OOFEM_LOG_INFO("/nAssembling activeBC contributions done in %.2fs", timer.getWtime());
+#endif
+    
     if ( domain->hasContactManager() ) {
         OOFEM_ERROR("Contact problems temporarily deactivated");
         //domain->giveContactManager()->assembleTangentFromContacts(answer, tStep, type, s, s);
@@ -944,6 +984,10 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
 
     answer.assembleBegin();
     answer.assembleEnd();
+#ifdef _OPENMP
+    timer0.stopTimer();
+    OOFEM_LOG_INFO("/nLHS Assembly done in %.2fs", timer0.getWtime());
+#endif
 }
 
 
@@ -1113,7 +1157,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
 
     this->timer.resumeTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
 #ifdef _OPENMP
-#pragma omp parallel for shared(answer, eNorms)
+#pragma omp parallel for shared(answer, eNorms) schedule(dynamic, 100)
 #endif
     for ( int i = 1; i <= nbc; ++i ) {
         GeneralBoundaryCondition *bc = domain->giveBc(i);
@@ -1286,7 +1330,7 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
     this->timer.resumeTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
     ///@todo Consider using private answer variables and sum them up at the end, but it just might be slower then a shared variable.
 #ifdef _OPENMP
-#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids)
+#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids) schedule(dynamic,100)
 #endif
     for ( int i = 1; i <= nelem; i++ ) {
 
@@ -1323,7 +1367,7 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
     }
 
 #ifdef _OPENMP
-#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids)
+#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids) schedule(dynamic,100)
 #endif
     for ( int i = 1; i <= nelem; i++ ) {
         Element *element = domain->giveElement(i);
@@ -1371,7 +1415,7 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
     }
 
 #ifdef _OPENMP
-#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids, assembleFlag)
+#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids, assembleFlag) schedule(dynamic, 100)
 #endif
     for ( int i = 1; i <= nelem; i++ ) {
         Element *element = domain->giveElement(i);

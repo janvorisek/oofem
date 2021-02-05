@@ -37,6 +37,8 @@
 #include "element.h"
 #include "dofmanager.h"
 #include "intarray.h"
+#include "timer.h"
+#include <set>
 
 namespace oofem {
 
@@ -141,4 +143,104 @@ ConnectivityTable :: giveNodeNeighbourList(IntArray &answer, IntArray &nodeList)
         }
     }
 }
+
+
+void
+ConnectivityTable::giveElementColoring(std::vector<std::vector<int> > &elementColorSets)
+{
+  /* strategy == 1 the minimum colors alloacated, the lowest color assigned
+     strategy == 2 the maxcolors created; element gets assigned color which has been assigned to the lowest number of elements
+  */ 
+  int strategy = 2;
+  int strategy2_numberOfColors = 30;
+  int nelem = this->domain->giveNumberOfElements();
+
+  //coloring of elements
+  IntArray cElemArray(1); //initial parameters of all ielem =0
+  IntArray elementColors(nelem);
+  IntArray colorCounter;
+  IntArray neighboursArray;
+  std::set<int> elementNeighborColors;
+  Timer timer;
+
+  if (strategy == 2) {
+    colorCounter.resize(strategy2_numberOfColors);
+  }
+  
+  timer.startTimer();
+  elementColorSets.clear();
+  if (nelem == 0) return;
+  for (int ielem = 1; ielem <= nelem; ielem++)
+    elementColors.at(ielem) = -1; //all members of elementColors assign initial value
+  
+  for (int ielem = 1; ielem <= nelem; ielem++) {
+    // Element *element = domain->giveElement(ielem);
+    
+    cElemArray.at(1) = ielem; //first member [0] in cElemArray is set as ielem
+    this->giveElementNeighbourList(neighboursArray, cElemArray);
+    // to neigrhboursArray wrote neighbours ID of execute ielem
+    elementNeighborColors.clear();
+    
+    for (int n = 1; n <= neighboursArray.giveSize(); n++) { // loop over element neighbors
+      if (elementColors.at(neighboursArray.at(n)) > 0) {
+	elementNeighborColors.insert(elementColors.at(neighboursArray.at(n)));
+      }
+    }
+
+
+    // assign color code to element
+    if (strategy==1) {
+      // default strategy -> assign lowest unused color
+      int _elementColor=1;
+      while (elementNeighborColors.find(_elementColor) != elementNeighborColors.end()) {
+	  _elementColor ++;
+      }
+      elementColors.at(ielem) = _elementColor;
+      colorCounter.resizeWithValues(_elementColor);
+      colorCounter.at(_elementColor)++;
+    } else if (strategy ==2) {
+      // determine the color with lowest occurence not in neighbour list
+      bool init = true;
+      int colorIndex=0, numberOfColors = colorCounter.giveSize();
+      for (int c=1; c<=numberOfColors; c++) {
+	if (elementNeighborColors.find(c) == elementNeighborColors.end()) {
+	  // color is allowable
+	  if (init) {
+	    init=false;
+	    colorIndex = c;
+	  } else {
+	    if (colorCounter.at(c) < colorCounter.at(colorIndex)) {
+	      colorIndex = c;
+	    }
+	  }
+	}
+      }
+      elementColors.at(ielem) = colorIndex;
+      colorCounter.at(colorIndex)++;
+    } // end strategy == 2
+    
+  }
+  int numberOfColors = elementColors.maximum();
+  elementColorSets.resize(numberOfColors);
+  for (int e = 1; e <= nelem; e++) {
+    elementColorSets[elementColors.at(e)-1].push_back(e);
+  }
+  
+  timer.stopTimer();
+  OOFEM_LOG_INFO("Element coloring done in %.2f[s] using %d colors \n", timer.getWtime(), numberOfColors);
+  if (false) {
+    elementColors.printYourself("Element colors");
+    for (int c = 1; c <= numberOfColors; c++) {
+      printf ("Color %d elements:", c);
+      for (int v:elementColorSets[c-1]) {
+	printf (" %d", v);
+      }
+      printf("\n");
+    }
+  }
+}
+  
+
+
+
 } // end namespace oofem

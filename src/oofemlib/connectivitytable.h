@@ -98,6 +98,10 @@ public:
      * @param nodeList List of nodes, which neighborhood is searched.
      */
     void giveNodeNeighbourList(IntArray &answer, IntArray &nodeList);
+    /**
+       Returns element coloring. Each element gets assigned a color, that is not present on anz of its neigbours.
+     */
+    void giveElementColoring (std::vector<std::vector<int> >&elementColorSets);
 };
 } // end namespace oofem
 #endif // conTable_h
