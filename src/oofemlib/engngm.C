@@ -88,6 +88,9 @@
  #include "oofeggraphiccontext.h"
 #endif
 
+#define DYNAMIC_SCHEDULE_POOL_SIZE 100
+
+
 namespace oofem {
 EngngModel :: EngngModel(int i, EngngModel *_master) : domainNeqs(), domainPrescribedNeqs(),
     exportModuleManager(this),
@@ -828,7 +831,7 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
 	auto element = domain->giveElement(elementColors[icolor-1][ielem-1]);
 #else
 #ifdef _OPENMP
-#pragma omp parallel for shared(answer) private(mat, R, loc) schedule(dynamic, 100)
+#pragma omp parallel for shared(answer) private(mat, R, loc) schedule(dynamic, DYNAMIC_SCHEDULE_POOL_SIZE)
 #endif
     for ( int ielem = 1; ielem <= nelem; ielem++ ) {
         auto element = domain->giveElement(ielem);
@@ -870,7 +873,7 @@ void EngngModel :: assemble(SparseMtrx &answer, TimeStep *tStep, const MatrixAss
 #ifdef _OPENMP
     timer.initTimer();
     timer.startTimer();
-#pragma omp parallel for shared(answer) private(mat, R, loc)
+#pragma omp parallel for shared(answer) private(mat, R, loc) schedule(dynamic, DYNAMIC_SCHEDULE_POOL_SIZE)
 #endif
     for ( auto &bc : domain->giveBcs() ) {
         auto abc = dynamic_cast< ActiveBoundaryCondition * >(bc.get());
@@ -1103,7 +1106,7 @@ void EngngModel :: assembleVectorFromDofManagers(FloatArray &answer, TimeStep *t
     this->timer.resumeTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
     // Note! For normal master dofs, loc is unique to each node, but there can be slave dofs, so we must keep it shared, unfortunately.
 #ifdef _OPENMP
-#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids)
+#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids) schedule(dynamic, DYNAMIC_SCHEDULE_POOL_SIZE)
 #endif
     for ( int i = 1; i <= nnode; i++ ) {
         DofManager *node = domain->giveDofManager(i);
@@ -1157,7 +1160,7 @@ void EngngModel :: assembleVectorFromBC(FloatArray &answer, TimeStep *tStep,
 
     this->timer.resumeTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
 #ifdef _OPENMP
-#pragma omp parallel for shared(answer, eNorms) schedule(dynamic, 100)
+#pragma omp parallel for shared(answer, eNorms) schedule(dynamic, DYNAMIC_SCHEDULE_POOL_SIZE)
 #endif
     for ( int i = 1; i <= nbc; ++i ) {
         GeneralBoundaryCondition *bc = domain->giveBc(i);
@@ -1330,7 +1333,7 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
     this->timer.resumeTimer(EngngModelTimer :: EMTT_NetComputationalStepTimer);
     ///@todo Consider using private answer variables and sum them up at the end, but it just might be slower then a shared variable.
 #ifdef _OPENMP
-#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids) schedule(dynamic,100)
+#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids) schedule(dynamic, DYNAMIC_SCHEDULE_POOL_SIZE)
 #endif
     for ( int i = 1; i <= nelem; i++ ) {
 
@@ -1367,7 +1370,7 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
     }
 
 #ifdef _OPENMP
-#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids) schedule(dynamic,100)
+#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids) schedule(dynamic, DYNAMIC_SCHEDULE_POOL_SIZE)
 #endif
     for ( int i = 1; i <= nelem; i++ ) {
         Element *element = domain->giveElement(i);
@@ -1415,7 +1418,7 @@ void EngngModel :: assembleVectorFromElements(FloatArray &answer, TimeStep *tSte
     }
 
 #ifdef _OPENMP
-#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids, assembleFlag) schedule(dynamic, 100)
+#pragma omp parallel for shared(answer, eNorms) private(R, charVec, loc, dofids, assembleFlag) schedule(dynamic, DYNAMIC_SCHEDULE_POOL_SIZE)
 #endif
     for ( int i = 1; i <= nelem; i++ ) {
         Element *element = domain->giveElement(i);
